@@ -112,7 +112,7 @@ class HeartDrake{
 
         foreach ($apps as $key => $value) {
 
-             $this->loader->add($key, realpath($_SERVER['DOCUMENT_ROOT'].'../'));
+             $this->loader->add($key, realpath($_SERVER['DOCUMENT_ROOT'].'/../'));
 
         }
 
@@ -135,31 +135,30 @@ class HeartDrake{
                 return die('404 - not found');
         }else{
 
-            if(!file_exists($_SERVER['DOCUMENT_ROOT'].'../'.$app.'/config.php')){
-                die('Config not found: ' . realpath($_SERVER['DOCUMENT_ROOT'].'../').'/'.$app.'/config.php');
+            if(!file_exists(realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/config.php'))){
+                die('Config not found: ' . realpath($_SERVER['DOCUMENT_ROOT'].'/../').'/'.$app.'/config.php');
             }
 
-            require_once $_SERVER['DOCUMENT_ROOT'].'../'.$app.'/config.php';
+            require_once realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/config.php');
             define('URL_LOGIN',$config['login.url']);
-            define('APP',$_SERVER['DOCUMENT_ROOT'].'../'.$app.'/');
+            define('APP',realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/'));
             define('URL', $config['url']);
             define('RTD', $config['router.default']);
-            define('M', APP.'Models/');
-            define('V', APP.'View/');
-            define('C', APP.'Controller/');
+            define('M', APP.'/Models/');
+            define('V', APP.'/View/');
+            define('C', APP.'/Controller/');
             define('PATH', realpath(__DIR__.'/../'));
             define('EXT', '.php');
             define('LANG', $config['lang']);
-
             if($config['debug'] === 'dev'){
                 /*Set on to display errors*/
                 ini_set('display_erros', 'on');
                 /*Enable the error reporting for ALL Errors*/
                 error_reporting(E_ALL);
                 /*Reg Whoops*/
-/*                $whoops = new \Whoops\Run;
+                $whoops = new \Whoops\Run;
                 $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
-                $whoops->register();*/
+                $whoops->register();
 
             }elseif($config['debug'] === 'prod'){
                 ini_set('display_erros', 'off');
@@ -171,7 +170,6 @@ class HeartDrake{
             }
 
         }
-
         return $app;
 
     }
