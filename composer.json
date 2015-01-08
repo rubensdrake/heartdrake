@@ -1,6 +1,6 @@
 {
     "name": "drake/heartdrake",
-    "description": "A micro framework based in MVC and Depencie Injection",
+    "description": "A micro framework based in MVC and dependency injection",
     "license": "MIT",
     "authors": [
         {
