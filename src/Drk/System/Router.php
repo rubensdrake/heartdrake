@@ -5,9 +5,37 @@ use Drk\System\Strings;
 use Drk\System\HeartDrake;
 use Drk\System\Security;
 
-class Router extends HeartDrake{
+class Router{
 
-	static function getSegments($n = -1,$route = true){
+	private $uri;
+
+	public function clearUrl()
+	{
+		$url = $_SERVER['HTTP_HOST'];
+		$url = str_replace('http://', '', $url);
+
+		if($url != '/')
+			$url = str_replace($url, '', $_SERVER['REQUEST_URI']);
+		else{
+			$url = $_SERVER['REQUEST_URI'];
+		}
+
+		$segments = explode('/', $url);
+
+		if(empty($segments[0])){
+			array_shift($segments);
+		}
+
+		return $segments;
+	}
+
+	public function getSegments()
+	{
+		return $this->clearUrl();
+	}
+
+	public function getSegments2($apps, $n = -1,$route = true){
+
 
 
     	$url = !defined('URL') ? $_SERVER['HTTP_HOST'] : URL;
@@ -32,19 +60,30 @@ class Router extends HeartDrake{
 		}
 
 
-		$apps = HeartDrake::getStaticConfig('apps');
+		//$apps = $this->app->getConfig('apps');
+
+		
+
 		$inc = 0;
 		$c = $segments[0];
+
+
+
+
+
 
 		if(in_array($c, $apps) and $route){
 			$inc++;
 		}
+
+
 
 		if($n != -1){
 	    	if(!empty($segments[$n+$inc])){
 				return $segments[$n+$inc];
 	    	}
     	}else{
+
     		return $segments;
     	}
     }
@@ -54,15 +93,15 @@ class Router extends HeartDrake{
 
 	public function route(){
 
-		$apps = $this->getConfig('apps');
+		$apps = $this->app->getConfig('apps');
 
 
 		$inc = 0;
 
 
-		if($this->getSegments(0,false)){
+		if($this->getSegments($apps, 0,false)){
 
-			$c = $this->getSegments(0,false);
+			$c = $this->getSegments($apps, 0,false);
 
 			if(in_array($c, $apps)){
 
@@ -74,8 +113,8 @@ class Router extends HeartDrake{
 			}
 
 
-			if($this->getSegments(0+$inc,false)){
-				$class = ucfirst($this->getSegments(0+$inc,false));
+			if($this->getSegments($apps, 0+$inc,false)){
+				$class = ucfirst($this->getSegments($apps, 0+$inc,false));
 			}elseif(RTD){
 				$class = RTD;
 			}
@@ -104,8 +143,8 @@ class Router extends HeartDrake{
 		$class = $class[0];
 		$className = $class;
 
-		if($this->getSegments(1+$inc,false))
-			$method = $this->getSegments(1+$inc,false);
+		if($this->getSegments($apps, 1+$inc,false))
+			$method = $this->getSegments($apps, 1+$inc,false);
 		else
 			$method = 'index';
 
@@ -119,7 +158,7 @@ class Router extends HeartDrake{
 					$class = "{$app}\\Controller\\{$class}";
 
 					try {
-						$class = new $class;
+						$class = new $class($this->app);
 					} catch (Exception $e) {
 						 echo $e->getMessage();
 					}

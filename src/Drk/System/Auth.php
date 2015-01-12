@@ -11,13 +11,15 @@ class Auth extends HeartDrake{
 
 	private $paths;
 
-	public function __construct()
+	public function __construct(HeartDrake $app)
 	{
 
-		$this->paths = $this->getConfig('authenticate');
+		$this->paths = $app->getConfig('authenticate');
+
+		$router = new Router($app);
+		$path = $router->getSegments();
 
 
-		$path = Router::getSegments();
 
 		$loginUrl = array_search($path[0], $this->paths);
 

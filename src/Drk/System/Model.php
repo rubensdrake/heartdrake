@@ -4,9 +4,10 @@ use Drk\System\Strings;
 
 class Model extends HeartDrake{
 
-	public function __construct(){
+	public function __construct($app){
 		
-		$config = HeartDrake::getInstance()->getConfig();
+		$config = $app->getConfig();
+
 
 
 		if($config['db']['driver'] == 'mongodb'){

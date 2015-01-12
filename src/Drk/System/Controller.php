@@ -10,25 +10,29 @@ use Drk\System\Security;
 class Controller extends HeartDrake
 {
 
-	protected $dependencies;
+	protected $application;
 
-	protected function __construct()
+	public function __construct($application)
 	{
 
-		$this->inject($this->dependencies);/*Inject All dependencies to this Class*/
-
-		if(isset($this->Logger) and $this->Logger instanceOf Logger){
-			$this->Logger->addWarning('acessed!');
-		}
-
+		$this->setApplication($application);
 		$this->method = $_SERVER['REQUEST_METHOD'];
-		$this->uri = $this->Router->getSegments();
 
+	}
+
+	public function setApplication($application)
+	{
+		$this->application = $application;
+	}
+
+	public function getApplication()
+	{
+		return $this->application;
 	}
 
 	public function getUrl($u = '')
 	{
-		return URL.$u;
+		return $this->getApplication()->getConfig('url').$u;
 	}
 
 	public function isAjax(){
@@ -62,8 +66,8 @@ class Controller extends HeartDrake
 
 	public function view($view,$vars = array()){
 
-		$vars['__URL'] = $this->getConfig('url');
-		$vars['__AUTH'] = $this->Auth->isAuth();
+		$vars['__URL'] = $this->getApplication()->getConfig('url');
+		//$vars['__AUTH'] = $this->Auth->isAuth();
 
 		if(!empty($vars))
 		foreach ($vars as $key => $value) {

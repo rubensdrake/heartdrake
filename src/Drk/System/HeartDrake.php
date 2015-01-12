@@ -5,74 +5,115 @@ namespace Drk\System;
 class HeartDrake{
 
 	// Guarda uma instância da classe
-    private static $instance;
-    private $dependencies = array();
+
     private $config = array();
     private $app;
     private $loader;
+    private $aplications;
+    private $uri;
 
-   //Used by another class that extends her
-    protected function inject($deps = array()){
+    private $class;
+    private $function;
 
 
-    	$this->register(
-    		$this->getInstance()
-    			 ->dependencies
-    	);
-
-        $deps[get_called_class()] = $deps;
-
-        if(count($deps))
-            $this->register(
-                $deps
-        );
-
+    //Block methods
+    public function __construct(array $aplications, \Composer\Autoload\ClassLoader $loader){
+        
+        $this->setLoader($loader); //Only put composer loader under private Loader
+        $this->setAplications($aplications);
+        $this->loadClassUnder('router','Drk\System\Router');
+       // $this->loadClassUnder('auth','Drk\System\Auth');
+        $this->setUri();
+        $this->isApp();
+        $this->loadAppConfig();
+        $this->setClassToLoad();
+        $this->go();
     }
 
-    public function addConfig($name, $value)
+    public function getClass()
+    {
+        return $this->class;
+    }
+
+    public function setClass($class)
+    {
+        $this->class = $class;
+    }
+
+    public function getFunction()
+    {
+        return $this->function;
+    }
+
+    public function setFunction($function)
+    {
+        $this->function = $function;
+    }
+
+    public function setUri()
+    {
+        $this->uri = $this->router->getSegments();
+    }
+
+    public function loadClassUnder($under, $class, $app = '')
+    {
+        $this->$under = new $class($app);
+    }
+
+    public function setAplications(array $aplications)
+    {
+        $this->aplications = $aplications;
+        foreach ($aplications as $key => $value) {
+
+             $this->loader->add($key, realpath('../'));
+
+        }
+    }
+
+    public function setConfig($name, $value)
     {
         $this->config[$name] = $value;
-
     }
 
-    // O método getInstance
-    public static function getInstance()
+    public function getApplications()
     {
-        if (!isset(self::$instance)) {
-            $c = __CLASS__;
-            self::$instance = new $c;
-        }
-
-        return self::$instance;
+        return $this->aplications;
     }
 
-    /**
-     * Register all dependencies configured in index.php
-     */
-    public function register($deps = array()){
+    public function getUri($pos = 'all')
+    {   
+        if($pos === 'all')
+            return $this->uri;
+        else
+            return $this->uri[(int)$pos];
+    }
 
-        if(count($deps) == 0){
-            $deps = $this->getConfig();
-            $deps = $deps['deps'];
+    public function setClassToLoad()
+    {
+
+        $validClass = (isset($this->uri[0]) and $this->uri[0] !== '') ? true : false;
+        $validFunction = isset($this->uri[1]) and $this->uri[0] !== '' ? true : false;
+
+        $class = $validClass ? $this->uri[0] : $this->getConfig('router.default');
+        $function = isset($this->uri[1]) ? $this->uri[1] : 'index';
+
+        $this->setClass($class);
+        $this->setFunction($function);
+    }
+
+
+    public function isApp()
+    {
+        $aplications = $this->getApplications();
+        $firstUri = $this->getUri(0);
+
+        if(in_array($firstUri, $aplications)){
+            $this->setApp(array_search($firstUri, $aplications));
+            unset($this->uri[0]);
+            $this->uri = array_values($this->uri);
+            return true;
         }
-
-    	if(isset($deps) and count($deps) > 0){
-    		foreach ($deps as $key => $d) {
-                if($key == 'GLOBAL' or $key == get_called_class())
-                    if(count($d) > 0)
-                        foreach ($d as $i => $dep) {
-                                if(!method_exists($this, $dep)){
-                                    if(class_exists($i)){
-                                        $this->$dep = new $i;
-                                        $this->dependencies[$key][$i] = $dep;
-                                    }else
-                                        throw new \Exception(Strings::get('class_not_found',$i.' - '.Strings::get('called_by',get_called_class())));
-
-                                }
-                        }
-
-            }
-    	}
+        return false;
     }
 
     /**
@@ -81,53 +122,30 @@ class HeartDrake{
      */
     public function getConfig($pos = null){
 
-        $config = $this->getInstance();
-
         if(!empty($pos)){
-            if(isset($config->config[$pos]))
-                return $config->config[$pos];
+            if(isset($this->config[$pos]))
+                return $this->config[$pos];
             else
                 return false;
         }
         else{
-            return $config->config;
+            return $this->config;
         }
     }
 
-    public static function getStaticConfig($pos = null)
+    public function addConfig($key, $value)
     {
-        $h = HeartDrake::getInstance();
+        $this->config[$key] = $value;
+    }
 
-        if(!empty($pos))
-            return $h->config[$pos];
-        else
-            return $h->config;
-
+    public function getApp()
+    {
+        return $this->app;
     }
 
 
-    public function getAppUri()
+    public function loadAppConfig()
     {
-        $apps = $this->getConfig('apps');
-
-        foreach ($apps as $key => $value) {
-
-             $this->loader->add($key, realpath($_SERVER['DOCUMENT_ROOT'].'/../'));
-
-        }
-
-        $c = Router::getSegments(0,false);
-
-        if(in_array($c, $apps)){
-            $app = array_search($c, $apps);
-        }else{
-            $app = array_search('', $apps);
-        }
-
-
-
-        $this->setApp($app);
-
         if(!$this->getApp()){
             if(ENVIRONMENT == 'dev')
                 return die(Strings::get('app_not_configured','index.php - $config[\'apps\'] = array(\'Namespace\' => \'path\')'));
@@ -135,13 +153,13 @@ class HeartDrake{
                 return die('404 - not found');
         }else{
 
-            if(!file_exists(realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/config.php'))){
-                die('Config not found: ' . realpath($_SERVER['DOCUMENT_ROOT'].'/../').'/'.$app.'/config.php');
+            if(!file_exists(realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$this->getApp().'/config.php'))){
+                die('Config not found: ' . realpath($_SERVER['DOCUMENT_ROOT'].'/../').'/'.$this->getApp().'/config.php');
             }
 
-            require_once realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/config.php');
+            require_once realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$this->getApp().'/config.php');
             define('URL_LOGIN',$config['login.url']);
-            define('APP',realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$app.'/'));
+            define('APP',realpath($_SERVER['DOCUMENT_ROOT'].'/../'.$this->getApp().'/'));
             define('URL', $config['url']);
             define('RTD', $config['router.default']);
             define('M', APP.'/Models/');
@@ -170,13 +188,37 @@ class HeartDrake{
             }
 
         }
-        return $app;
-
     }
+
 
     public function go()
     {
-        $this->Router->route();
+
+        $classP = ucfirst($this->getClass());
+        $functonP = $this->getFunction();
+        $app = $this->getApp();
+
+
+        if(file_exists(C.$classP.EXT)){
+            
+            $class = "{$app}\\Controller\\{$classP}";
+
+
+            try {
+                $class = new $class($this);
+            } catch (Exception $e) {
+                 echo $e->getMessage();
+            }
+
+        }
+
+        if(method_exists($class, $this->getFunction())){
+            if(method_exists($class, 'inject'))
+                $class->inject($this);
+            $class->$functonP();
+        }else{
+            throw new \Exception(Strings::get('method_not_found',$this->getFunction()));
+        }
         exit();
     }
 
@@ -190,18 +232,7 @@ class HeartDrake{
         $this->app = $app;
     }
 
-    public function getApp()
-    {
-        return $this->app;
-    }
 
-    /**
-     * Return config.php
-     * @return array
-     */
-    public function setConfig($config = array()){
-        $this->config = $config;
-    }
 
     public function redirect($url) {
         if(!headers_sent()) {
@@ -218,14 +249,7 @@ class HeartDrake{
             echo '</noscript>';
             exit;
         }
-}
-
-
-
-    //Block methods
-    private function __construct(){}
-    private function __clone()		{trigger_error('Clone is not allowed.', E_USER_ERROR);}
-
+    }
 
 }
 

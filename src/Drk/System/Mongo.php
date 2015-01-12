@@ -6,9 +6,7 @@ class Mongo extends HeartDrake{
 
 	private $con;
 
-	public function __construct(){
-
-		$config = $this->getConfig('db');
+	public function __construct($config){
 
 		$dsn = 'mongodb://'.$config['user'].':'.$config['password'].'@'.$config['server'].'/'.$config['dbname'];
 
